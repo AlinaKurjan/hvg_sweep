@@ -143,20 +143,14 @@ After step 4, `adata.var['highly_variable']` is set and ready for `sc.pp.pca()` 
 
 ### marker_genes.py
 
-The marker gene dictionary serves as the biological ground truth for evaluating HVG quality. The provided file contains curated markers for human skeletal muscle and tendon cell types, but the structure is fully generic.
+The marker gene dictionary serves as the biological ground truth for evaluating HVG quality. The provided file now contains a **small, generic example dictionary** (broad epithelial / stromal / immune / vascular compartments) intended as a **template**. In almost all real analyses you should **copy and customise** these markers for your own tissue, species and question.
 
 #### Exported Objects
 
 | Name | Type | Description |
 |---|---|---|
-| `COARSE_MARKERS` | `Dict[str, List[str]]` | ~15 broad cell compartments, 8-25 genes each |
-| `FINE_MARKERS` | `Dict[str, List[str]]` | ~58 subtypes within compartments, 4-12 genes each |
-| `FINE_TO_COARSE` | `Dict[str, str]` | Maps each fine subtype to its parent coarse type |
-| `NEGATIVE_MARKERS` | `Dict[str, List[str]]` | Genes that should NOT be expressed (for disambiguation) |
-| `NUISANCE_MARKERS` | `Dict[str, List[str]]` | Known uninformative gene categories (myofibre, histones, cell cycle, etc.) |
+| `COARSE_MARKERS` | `Dict[str, List[str]]` | Example broad compartments (epithelial, fibroblasts, endothelial, immune, etc.), 8–20 genes each |
 | `filter_markers_to_adata()` | function | Filters a marker dict to genes present in the dataset |
-| `get_dotplot_markers()` | function | Returns 2-4 top genes per type for summary dotplots |
-| `get_diagnostic_markers()` | function | Returns 1-3 most pathognomonic genes per type |
 
 #### Dictionary Format
 
@@ -173,6 +167,16 @@ MARKERS: Dict[str, List[str]] = {
 - **Values** are lists of gene symbols (strings). Use the same gene symbol convention as your AnnData's `var_names` (typically HGNC symbols for human data).
 - Aim for **8-25 genes** per cell type at the coarse level. Too few gives unstable coverage estimates; too many dilutes specificity.
 - Genes present in multiple cell types are allowed (biological co-expression is real), but minimising overlap improves discriminative power.
+
+#### Tips for choosing marker genes
+
+- **Start from biology you trust**: atlases, CellMarker, PanglaoDB and well-cited papers for your tissue.
+- **Favour strong enrichment**: genes that are clearly higher in one cell type than all others (e.g. `CD3D` for T cells, `PECAM1` for endothelial cells).
+- **Avoid housekeeping / ubiquitous genes**: e.g. `ACTB`, `GAPDH`, `RPL*`, `RPS*` – they add noise to the coverage fraction without helping identity calls.
+- **Avoid cell-cycle, stress and immediate-early genes**: e.g. `MKI67`, `TOP2A`, `FOS`, `JUN`, `HSPA1A`. These reflect state rather than identity and are better treated as nuisance.
+- **Consider removing extreme structural genes from the marker dict** if they already dominate your dataset and are not helpful for distinguishing *between* cell types in your question (e.g. sarcomeric genes in muscle-only data, collagen super-high expressers in stromal-only data). Those can instead be tracked as custom nuisance categories.
+
+You should treat `COARSE_MARKERS` as a **living file**: for a new project, copy `marker_genes.py`, rename the cell-type keys and adjust the gene lists for your biology.
 
 ### hvg_evaluation.py
 
@@ -271,7 +275,7 @@ All plotting functions accept an optional `save_path` parameter to save the figu
 
 ### Writing Your Own Marker Dictionary
 
-To use this toolkit for a different tissue or organism, create your own `marker_genes.py` with at minimum a `COARSE_MARKERS` dictionary and the `filter_markers_to_adata` helper:
+To use this toolkit for a different tissue or organism, either **edit the provided `marker_genes.py` directly** or create your own with at minimum a `COARSE_MARKERS` dictionary and the `filter_markers_to_adata` helper:
 
 ```python
 """Marker genes for [your tissue/organism]."""
@@ -318,6 +322,7 @@ def filter_markers_to_adata(
 - Aim for 8-25 genes per cell type — enough for stable scoring, not so many that specificity is diluted
 - Prefer well-validated, highly specific markers over broadly expressed genes
 - Minimise overlap between cell types to improve discriminative power
+- Periodically re-check marker sets after annotation: if a gene turns out to be broadly expressed or driven by batch / QC artefacts rather than biology, remove it from the marker dict.
 - The `filter_markers_to_adata` function automatically drops genes absent from the dataset and removes cell types with fewer than 2 detectable markers
 
 ### Changing the Parameter Grid
@@ -355,7 +360,7 @@ Mismatched combinations will fail gracefully and be skipped with a warning.
 
 ### Adding Custom Nuisance Gene Categories
 
-Three categories are always checked (mitochondrial, ribosomal, hemoglobin). To add tissue-specific nuisance genes, pass a dictionary mapping category names to gene lists:
+Three categories are always checked (mitochondrial, ribosomal, hemoglobin). To add **tissue- and experiment-specific** nuisance genes, pass a dictionary mapping category names to gene lists:
 
 ```python
 custom_nuisance = {
@@ -375,6 +380,16 @@ hvg_sweep_df = run_hvg_sweep(
 ```
 
 Custom categories appear as additional `n_<name>` and `pct_<name>` columns in the results DataFrame, and are included in the aggregate `n_nuisance` / `pct_nuisance` totals used by the recommendation scoring.
+
+#### Tips for selecting nuisance genes
+
+- **Think about “wasted HVG slots”**: genes that are always highly expressed but tell you little about **which** cell type a cluster represents.
+- Typical examples:
+  - Structural genes that dominate one compartment but are not informative within it (e.g. contractile apparatus genes in muscle, keratins in skin, collagen super-expressers in fibroblast-only datasets).
+  - Ambient contamination signatures (e.g. epithelial keratins in mostly stromal samples, plasma proteins like `ALB`, `APOA1` in solid tissues).
+  - Technical artefact signatures specific to your protocol, if any are known.
+- Avoid adding **true identity markers** (e.g. `CD3D` for T cells) to nuisance lists, or you will unfairly penalise configurations that correctly keep these markers.
+- Start with a small, conservative nuisance list, inspect which nuisance genes are retained at the recommended configuration, and iteratively refine.
 
 ### Tuning the Recommendation Weights
 
