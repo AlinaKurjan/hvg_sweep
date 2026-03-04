@@ -503,15 +503,19 @@ hvg_sweep_df.to_csv("example_results/hvg_sweep_marker_coverage.csv", index=False
 
 ## Example Notebook / Workflow
 
-A minimal end-to-end workflow (suitable for a Jupyter notebook) typically:
+The repository includes an example Jupyter notebook, `example_notebook.ipynb`, that demonstrates a full end-to-end workflow on a real concatenated dataset.
 
-1. Loads a QC-filtered `AnnData` object with the layers you want to evaluate.
-2. Defines or imports a marker dictionary (e.g. `COARSE_MARKERS`) and optional nuisance sets (e.g. `NUISANCE_GENES`).
-3. Runs the HVG parameter sweep with `run_hvg_sweep`, and optionally saves the results to CSV (see `example_results/hvg_sweep_marker_coverage.csv`).
-4. Generates diagnostic figures using the plotting helpers, saving them to disk (see the PNGs in `example_figures/` for concrete examples of each plot).
-5. Uses `recommend_optimal` to pick a configuration and, if desired, applies it to the data with `apply_optimal_hvgs` before continuing with downstream analysis (PCA/clustering/integration) in your own pipeline.
+Concretely, the notebook:
 
-The repository does not ship a specific notebook file, but the **Quick Start** code block shows the core sequence of function calls that produced the example CSV and figures.
+1. **Sets up the environment**: creates `results/` and `figures/` folders, configures Scanpy plotting, and prints version information.
+2. **Loads data**: reads a fully QC-filtered `AnnData` object from `concatenated.h5ad`, with SoupX-corrected raw counts in `layers['soupX_counts']`.
+3. **Performs normalisation**: computes two normalised layers, `log1p_norm` (Scanpy `normalize_total` + `log1p`) and `scran_log1p` (size-factor normalisation via `scranPY` on SoupX-corrected counts).
+4. **Imports marker/nuisance dictionaries and runs the sweep**: pulls `COARSE_MARKERS` and nuisance categories (e.g. mitochondrial, ribosomal, hemoglobin and custom tissue-specific sets) from `marker_genes.py`, then calls `run_hvg_sweep` from `hvg_evaluation.py` to evaluate the default grid of layer+flavor, `n_top_genes` (1000–5000) and batch key (`donor` vs. batch-naive).
+5. **Saves and inspects results**: writes the sweep summary to `results/hvg_sweep_marker_coverage.csv` and displays the head of the resulting DataFrame in the notebook.
+6. **Generates diagnostic plots**: uses `plot_marker_coverage_heatmap`, `plot_nuisance_heatmap`, `plot_quality_summary`, and related helpers to create the example figures under `figures/`.
+7. **Chooses and applies an optimal configuration**: calls `recommend_optimal` to pick a best-performing parameter set and `apply_optimal_hvgs` to update `adata_concat.var['highly_variable']`, then inspects which marker genes remain missing via `plot_missing_markers_table`.
+
+If you prefer to roll your own notebook, the **Quick Start** section above shows the same core sequence of function calls that power `example_notebook.ipynb` and the example CSV/figures.
 
 ## Dependencies
 
