@@ -11,8 +11,10 @@ they are:
 You will get the **best results** if you customise both:
 
 1. ``COARSE_MARKERS`` – cell-type–specific markers for your tissue / organism
-2. The nuisance gene sets passed as ``custom_nuisance`` to
-   :func:`hvg_evaluation.run_hvg_sweep`
+2. The nuisance gene sets you pass as ``custom_nuisance`` to
+   :func:`hvg_evaluation.run_hvg_sweep`.  This file also provides an
+   **optional example** dictionary called ``NUISANCE_GENES`` that you can
+   import and adapt.
 
 Practical tips for **choosing positive markers** (for ``COARSE_MARKERS``)
 -----------------------------------------------------------------------
@@ -232,6 +234,166 @@ COARSE_MARKERS: Dict[str, List[str]] = {
         "GP9",
         "TUBB1",
         "ITGB3",
+    ],
+}
+
+
+# ===========================================================================
+# OPTIONAL EXAMPLE NUISANCE GENE SETS
+#
+# These categories are meant as a starting point for ``custom_nuisance`` in
+# :func:`hvg_evaluation.run_hvg_sweep`.  They **complement** the built-in
+# mitochondrial / ribosomal / hemoglobin detection in ``hvg_evaluation``.
+#
+# You should:
+#   - Remove categories that are not relevant for your tissue
+#   - Add categories that capture obvious ambient or structural artefacts in
+#     your own data
+#   - Keep the focus on genes that are abundant but not helpful for assigning
+#     cell identity
+# ===========================================================================
+
+NUISANCE_GENES: Dict[str, List[str]] = {
+    # Strong structural genes that can dominate HVG sets when you are not
+    # interested in this compartment (e.g. muscle genes in non-muscle tissue).
+    # Replace / remove this for non-muscle projects.
+    "myofibre_like": [
+        "TTN",
+        "NEB",
+        "DES",
+        "DMD",
+        "ACTA1",
+        "RYR1",
+        "MYH7",
+        "MYH1",
+        "MYH2",
+        "TNNT1",
+        "TNNT3",
+        "TNNC1",
+        "TNNC2",
+        "TNNI1",
+        "TNNI2",
+        "MYBPC1",
+        "MYL1",
+        "MYL2",
+        "CKM",
+        "MB",
+    ],
+
+    # Cell-cycle genes – useful for cell state, but often not what you want
+    # to prioritise when defining broad cell types.
+    "cell_cycle": [
+        "MKI67",
+        "TOP2A",
+        "UBE2C",
+        "CDC20",
+        "CCNB1",
+        "CCNB2",
+        "CCNA2",
+        "CDK1",
+        "CENPF",
+        "CENPA",
+        "AURKB",
+        "BIRC5",
+        "PCNA",
+        "MCM2",
+        "MCM3",
+        "MCM4",
+        "MCM5",
+        "MCM6",
+        "MCM7",
+        "TYMS",
+    ],
+
+    # Histone genes – usually reflect proliferation / chromatin state rather
+    # than cell identity.
+    "histones": [
+        "HIST1H1C",
+        "HIST1H1D",
+        "HIST1H2AC",
+        "HIST1H2AD",
+        "HIST1H2AE",
+        "HIST1H2AG",
+        "HIST1H2AJ",
+        "HIST1H2AK",
+        "HIST1H2AL",
+        "HIST1H2AM",
+        "HIST1H2BC",
+        "HIST1H2BD",
+        "HIST1H2BE",
+        "HIST1H2BF",
+        "HIST1H2BG",
+        "HIST1H2BH",
+        "HIST1H2BI",
+        "HIST1H2BJ",
+        "HIST1H3A",
+        "HIST1H3B",
+        "HIST1H3C",
+        "HIST1H3D",
+        "HIST1H3E",
+        "HIST1H3F",
+        "HIST2H2AA3",
+        "HIST2H2AC",
+        "HIST2H2BE",
+        "HIST2H3A",
+        "HIST2H3C",
+        "HIST2H4A",
+    ],
+
+    # Erythroid and platelet genes – can be treated as nuisance if these
+    # populations are not of interest or are mostly ambient / doublets.
+    "erythrocytes": [
+        "HBA1",
+        "HBA2",
+        "HBB",
+        "ALAS2",
+        "SLC4A1",
+    ],
+    "platelets": [
+        "PF4",
+        "PPBP",
+        "ITGA2B",
+        "GP9",
+        "TUBB1",
+        "ITGB3",
+    ],
+
+    # Ambient epithelial or keratin contamination, often seen in dissociated
+    # solid tissues with a small epithelial lining.
+    "ambient_epithelium_keratins": [
+        "KRT1",
+        "KRT5",
+        "KRT10",
+        "KRT14",
+        "KRT15",
+        "KRT17",
+        "KRT18",
+        "KRT19",
+    ],
+
+    # Immunoglobulins and plasma proteins – useful as identity markers for
+    # plasma / B cells and hepatocytes, but often unwanted contamination in
+    # other contexts. Use with care and adjust for your question.
+    "ambient_immunoglobulin": [
+        "IGKC",
+        "IGHG1",
+        "IGHG2",
+        "IGHG3",
+        "IGHG4",
+        "IGLC1",
+        "IGLC2",
+        "IGLC3",
+        "IGLC7",
+    ],
+    "ambient_plasma_proteins": [
+        "ALB",
+        "APOA1",
+        "APOA2",
+        "APOE",
+        "AHSG",
+        "FGA",
+        "FGB",
+        "FGG",
     ],
 }
 

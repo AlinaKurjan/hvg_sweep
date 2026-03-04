@@ -150,6 +150,7 @@ The marker gene dictionary serves as the biological ground truth for evaluating 
 | Name | Type | Description |
 |---|---|---|
 | `COARSE_MARKERS` | `Dict[str, List[str]]` | Example broad compartments (epithelial, fibroblasts, endothelial, immune, etc.), 8–20 genes each |
+| `NUISANCE_GENES` | `Dict[str, List[str]]` | Optional example nuisance categories (cell cycle, histones, erythrocytes, platelets, ambient keratins, plasma proteins, etc.) |
 | `filter_markers_to_adata()` | function | Filters a marker dict to genes present in the dataset |
 
 #### Dictionary Format
@@ -258,18 +259,18 @@ Re-runs HVG selection with the recommended parameters and writes `adata.var['hig
 
 #### Plotting Functions
 
-All plotting functions accept an optional `save_path` parameter to save the figure to disk.
+All plotting functions accept an optional `save_path` parameter to save the figure to disk. The repository includes example outputs in `example_figures/` that correspond to these functions.
 
-| Function | Description |
-|---|---|
-| `plot_marker_coverage_heatmap()` | Heatmap: overall marker fraction, conditions × n_top_genes |
-| `plot_marker_coverage_lines()` | Line plot: overall marker fraction vs. n_top_genes per condition |
-| `plot_per_celltype_coverage()` | Grouped bar chart: per-cell-type coverage at a given n_top_genes |
-| `plot_nuisance_heatmap()` | Heatmap: nuisance gene percentage, conditions × n_top_genes |
-| `plot_nuisance_lines()` | Line plot: nuisance % vs. n_top_genes per condition |
-| `plot_nuisance_breakdown()` | Stacked bar chart: per-category nuisance counts for every condition |
-| `plot_quality_summary()` | Two-panel summary: marker coverage (higher=better) vs. nuisance (lower=better) |
-| `plot_missing_markers_table()` | Returns a DataFrame listing which markers are missing from a given HVG set |
+| Function | Description | Example file |
+|---|---|---|
+| `plot_marker_coverage_heatmap()` | Heatmap: overall marker fraction, conditions × n_top_genes | `example_figures/hvg_sweep_heatmap.png` |
+| `plot_marker_coverage_lines()` | Line plot: overall marker fraction vs. n_top_genes per condition | `example_figures/hvg_sweep_lines.png` |
+| `plot_per_celltype_coverage()` | Grouped bar chart: per-cell-type coverage at a given n_top_genes (default 3000) | `example_figures/hvg_sweep_celltype_3000.png` |
+| `plot_nuisance_heatmap()` | Heatmap: nuisance gene percentage, conditions × n_top_genes | `example_figures/hvg_sweep_nuisance_heatmap.png` |
+| `plot_nuisance_lines()` | Line plot: nuisance % vs. n_top_genes per condition | `example_figures/hvg_sweep_nuisance_lines.png` |
+| `plot_nuisance_breakdown()` | Stacked bar chart: per-category nuisance counts for every condition | `example_figures/hvg_sweep_nuisance_breakdown.png` |
+| `plot_quality_summary()` | Two-panel summary: marker coverage (left, higher=better) vs. nuisance % (right, lower=better) | `example_figures/hvg_sweep_quality_summary.png` |
+| `plot_missing_markers_table()` | Returns a DataFrame listing which markers are missing from a given HVG set | (tabular; not plotted, see `plot_missing_markers_table` in Quick Start) |
 
 ## Customisation Guide
 
@@ -381,6 +382,31 @@ hvg_sweep_df = run_hvg_sweep(
 
 Custom categories appear as additional `n_<name>` and `pct_<name>` columns in the results DataFrame, and are included in the aggregate `n_nuisance` / `pct_nuisance` totals used by the recommendation scoring.
 
+You can also start from the **optional template** provided in `marker_genes.py`:
+
+```python
+from marker_genes import NUISANCE_GENES
+
+# Use as-is
+hvg_sweep_df = run_hvg_sweep(
+    adata,
+    marker_dict=COARSE_MARKERS,
+    custom_nuisance=NUISANCE_GENES,
+)
+
+# Or take a tailored subset / edited copy
+my_nuisance = {
+    "cell_cycle": NUISANCE_GENES["cell_cycle"],
+    "ambient_epithelium_keratins": NUISANCE_GENES["ambient_epithelium_keratins"],
+    # drop categories that are not relevant, and add your own here
+}
+hvg_sweep_df = run_hvg_sweep(
+    adata,
+    marker_dict=COARSE_MARKERS,
+    custom_nuisance=my_nuisance,
+)
+```
+
 #### Tips for selecting nuisance genes
 
 - **Think about “wasted HVG slots”**: genes that are always highly expressed but tell you little about **which** cell type a cluster represents.
@@ -423,7 +449,20 @@ best = recommend_optimal(hvg_sweep_df, marker_weight=0.3, nuisance_weight=0.7)
 
 ## Output Description
 
-### Sweep DataFrame Columns
+### Sweep DataFrame and example results
+
+The main output of `run_hvg_sweep` is a tidy `pandas.DataFrame` with one row per parameter combination. An example CSV export is provided at:
+
+- `example_results/hvg_sweep_marker_coverage.csv`
+
+You can reproduce a similar file with:
+
+```python
+hvg_sweep_df = run_hvg_sweep(adata, marker_dict=COARSE_MARKERS)
+hvg_sweep_df.to_csv("example_results/hvg_sweep_marker_coverage.csv", index=False)
+```
+
+### Sweep DataFrame columns
 
 | Column | Description |
 |---|---|
@@ -462,15 +501,17 @@ best = recommend_optimal(hvg_sweep_df, marker_weight=0.3, nuisance_weight=0.7)
 ============================================================
 ```
 
-## Example Notebook
+## Example Notebook / Workflow
 
-The included `02_DimReduction.ipynb` demonstrates the full workflow in the context of a human skeletal muscle / tendon single-cell analysis:
+A minimal end-to-end workflow (suitable for a Jupyter notebook) typically:
 
-1. Loads a concatenated, QC-filtered AnnData object with multiple normalisation layers
-2. Runs the HVG parameter sweep across 6 layer-flavor combinations × 7 n_top_genes values × 2 batch settings (84 total configurations)
-3. Generates diagnostic plots (heatmaps, line plots, bar charts)
-4. Recommends and applies the optimal HVG selection
-5. Proceeds to PCA, Harmony integration, and cell-type annotation
+1. Loads a QC-filtered `AnnData` object with the layers you want to evaluate.
+2. Defines or imports a marker dictionary (e.g. `COARSE_MARKERS`) and optional nuisance sets (e.g. `NUISANCE_GENES`).
+3. Runs the HVG parameter sweep with `run_hvg_sweep`, and optionally saves the results to CSV (see `example_results/hvg_sweep_marker_coverage.csv`).
+4. Generates diagnostic figures using the plotting helpers, saving them to disk (see the PNGs in `example_figures/` for concrete examples of each plot).
+5. Uses `recommend_optimal` to pick a configuration and, if desired, applies it to the data with `apply_optimal_hvgs` before continuing with downstream analysis (PCA/clustering/integration) in your own pipeline.
+
+The repository does not ship a specific notebook file, but the **Quick Start** code block shows the core sequence of function calls that produced the example CSV and figures.
 
 ## Dependencies
 
